@@ -1,27 +1,72 @@
-# Walkman Playlist Assistant Super Script (GUI Edition)
+# 🎧 Walkman Playlist Assistant (GUI Edition)
 
-![pngegg](https://github.com/user-attachments/assets/14605f7d-8072-4b47-a43a-aaad7e6a6fbd)
+<p align="center">
+  <img width="180" src="https://github.com/user-attachments/assets/876165c1-4888-441c-9b97-bfb1bb5dd68a">
+</p>
+
+<p align="center">
+  <b>A lightweight desktop tool for generating Walkman-compatible playlists</b>
+</p>
+
+---
 
 
+##  Features
 
-Walkman Playlist Assistant Super Script (GUI Edition)
+### Playlist Generation
+- Generate `.m3u8` playlists compatible with Walkman devices  
+- Scan entire music libraries automatically  
+- Create:
+  - **One playlist for all files**
+  - **One playlist per folder (including subfolders)**  
+- Option to **exclude Instrumental/Karaoke tracks**  
+- Uses **metadata when available**, with filename fallback  
+- Supports **flexible playlist locations** using relative paths  
 
-I made this little tool for Walkman devices (NW-A5X and below) that do not run Android. Playlist files were difficult to make considering the formatting, so I wrote a quick tool to do all that for me. 
+---
 
-Supports WAV, FLAC, MP3, M4A, WMA, OGG, and AAC. Can easily support more by just editing the code. 
+### Folder Sync & Comparison
+- Compare two directories (e.g., Walkman vs. library)  
+- Detect:
+  - Missing files  
+  - Extra files  
+- Copy missing files between folders (**choose direction**)  
 
-# How it works:
+---
 
--Select the Music folder you would like to scan for files.
+## Supported Formats
+ MP3 • FLAC • WAV • M4A • WMA • OGG • AAC (also you can just add more its very open)
+ 
+---
 
--Select the root directory that you are going to store the playlist file in.
+## Usage
 
--Name the playlist file.
+1. Select your **Music Folder**  
+2. Choose:
+   - a **playlist file path** (single playlist), or  
+   - an **output folder** (multiple playlists)  
+3. (Optional) Enable filtering options  
+4. Click **Generate Playlist(s)**  
 
--Generate the file.
+---
 
--yay
+## Platform Support
 
-# Disclaimer:
+- Windows (tested on Windows 11 23H2)  
+- Linux (tested on openSUSE)  
 
-This is badly written in Python and compiled using PyInstaller. Built for both Windows and Linux. Tested on Windows 11 23H2 and OpenSUSE. Feel free to do whatever you would like with this tool.
+---
+
+## Notes
+
+- Designed for **non-Android Sony Walkman devices**  
+- Some models may not support `../` relative paths  
+- Best results when playlists are near the music folder  
+- Metadata quality depends on your files  
+
+---
+
+## Disclaimer
+
+This project was created as a personal utility and may not follow best practices.  
+It is provided **as-is**, with no guarantees.
