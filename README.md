@@ -1,4 +1,4 @@
-# 🎧 Walkman Playlist Assistant (GUI Edition)
+# Walkman Playlist Assistant (GUI Edition)
 
 <p align="center">
   <img width="180" src="https://github.com/user-attachments/assets/876165c1-4888-441c-9b97-bfb1bb5dd68a">
