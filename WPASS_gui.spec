@@ -1,12 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
-
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 a = Analysis(
     ['WPASS_gui.py'],
     pathex=[],
     binaries=[],
-    datas=[],
-    hiddenimports=[],
+    datas=collect_data_files('tkinter'),
+    hiddenimports=[
+        *collect_submodules('tkinter'),
+        'mutagen.mp3', 'mutagen.flac', 'mutagen.wave',
+        'mutagen.easymp4', 'mutagen.asf', 'mutagen.oggvorbis',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -15,7 +19,6 @@ a = Analysis(
     optimize=0,
 )
 pyz = PYZ(a.pure)
-
 exe = EXE(
     pyz,
     a.scripts,
@@ -26,7 +29,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
