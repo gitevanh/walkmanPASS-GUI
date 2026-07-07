@@ -1,4 +1,4 @@
-('V:\\Coding\\Scripts\\GitHub\\wpassgui\\build\\WPASS_gui\\PYZ-00.pyz',
+('V:\\coding\\Scripts\\GitHub\\wpassgui\\build\\WPASS_gui\\PYZ-00.pyz',
  [('__future__',
    'C:\\Program Files\\Python312\\Lib\\__future__.py',
    'PYMODULE'),

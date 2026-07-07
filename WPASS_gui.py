@@ -15,6 +15,7 @@ Requirements:
 import json
 import os
 import re
+import random
 import shutil
 import subprocess
 import sys
@@ -263,6 +264,30 @@ def generate_playlists_per_folder(root_dir, output_dir, exclude_instr, progress_
 
     return len(folder_files), tracks_written, total
 
+def generate_mix_playlist(folders, playlist_path, exclude_instr,
+                           shuffle=False, progress_cb=None):
+    """
+    Combine all audio files under multiple folders (recursive) into one
+    M3U8 playlist. Duplicate file paths are skipped.
+    Returns (tracks_written, tracks_scanned).
+    """
+    seen  = set()
+    files = []
+    for folder in folders:
+        for f in _scan_files(folder):
+            if f not in seen:
+                seen.add(f)
+                files.append(f)
+
+    if shuffle:
+        random.shuffle(files)
+
+    with open(playlist_path, 'w', encoding='utf-8') as f:
+        f.write('#EXTM3U\n')
+        written = _write_playlist_entries(
+            f, files, Path(playlist_path), exclude_instr,
+            progress_cb, offset=0, total=len(files))
+    return written, len(files)
 # ── Folder sync ───────────────────────────────────────────────────────────────
 
 def compare_folders(pa, pb):
@@ -382,16 +407,18 @@ class WPASSApp:
 
         nb = ttk.Notebook(self.root)
         nb.pack(fill='both', expand=True, padx=4, pady=4)
-        tab_pl   = tk.Frame(nb, bg=BG)
-        tab_sync = tk.Frame(nb, bg=BG)
+        tab_pl    = tk.Frame(nb, bg=BG)
+        tab_mix   = tk.Frame(nb, bg=BG)
+        tab_sync  = tk.Frame(nb, bg=BG)
         tab_about = tk.Frame(nb, bg=BG)
-        nb.add(tab_pl,   text='  Playlist Generator  ')
-        nb.add(tab_sync, text='  Folder Sync  ')
+        nb.add(tab_pl,    text='  Playlist Generator  ')
+        nb.add(tab_mix,   text='  Mix Playlist  ')
+        nb.add(tab_sync,  text='  Folder Sync  ')
         nb.add(tab_about, text='  About  ')
         self._build_playlist_tab(tab_pl)
+        self._build_mix_tab(tab_mix)
         self._build_sync_tab(tab_sync)
-        self._build_about_tab(tab_about)
-        
+        self._build_about_tab(tab_about)    
         self.status_var = tk.StringVar(value='Ready.')
         tk.Label(self.root, textvariable=self.status_var,
                  bg=BG, fg=FG, font=FONT, anchor='w',
@@ -535,7 +562,55 @@ class WPASSApp:
         self.txt.tag_configure('ok',      foreground='#55ff55',
                                font=('Courier New', 9, 'bold'))
         self.txt.tag_configure('dim',     foreground='#555555')
-        
+    
+    def _build_mix_tab(self, parent):
+        """Populate the Mix Playlist tab."""
+        pad = dict(padx=8, pady=4)
+
+        # Folder list ────────────────────────────────────────────────────────
+        sec_f = self._section(parent, 'Artist / Source Folders')
+        sec_f.pack(fill='both', expand=True, **pad)
+        sec_f.rowconfigure(0, weight=1)
+        sec_f.columnconfigure(0, weight=1)
+
+        self.mix_list = tk.Listbox(sec_f, font=FONT, bg=WHITE, fg=FG,
+                                    relief='sunken', bd=2, selectmode='extended',
+                                    selectbackground=NAVY, selectforeground=WHITE)
+        self.mix_list.grid(row=0, column=0, sticky='nsew', pady=(0, 4))
+
+        sy = tk.Scrollbar(sec_f, command=self.mix_list.yview, relief='raised')
+        sy.grid(row=0, column=1, sticky='ns', pady=(0, 4))
+        self.mix_list['yscrollcommand'] = sy.set
+
+        frm_b = tk.Frame(sec_f, bg=BG)
+        frm_b.grid(row=1, column=0, columnspan=2, sticky='ew')
+        self._btn(frm_b, 'Add Folder...', self._mix_add_folder).pack(side='left', padx=(0, 4))
+        self._btn(frm_b, 'Remove Selected', self._mix_remove_selected).pack(side='left', padx=(0, 4))
+        self._btn(frm_b, 'Clear All', lambda: self.mix_list.delete(0, tk.END)).pack(side='left')
+
+        # Output ─────────────────────────────────────────────────────────────
+        sec_o = self._section(parent, 'Output')
+        sec_o.pack(fill='x', **pad)
+        sec_o.columnconfigure(1, weight=1)
+
+        self._label(sec_o, 'Playlist File:').grid(row=0, column=0, sticky='w', pady=3)
+        self.e_mix_pl = self._entry(sec_o)
+        self.e_mix_pl.grid(row=0, column=1, sticky='ew', padx=(6, 4), pady=3)
+        self._btn(sec_o, 'Save As...', self._mix_pick_file).grid(row=0, column=2, pady=3)
+
+        self.mix_shuffle_var = tk.BooleanVar()
+        cb_sh = self._check(sec_o, 'Shuffle track order (radio style)', self.mix_shuffle_var)
+        cb_sh.grid(row=1, column=0, columnspan=3, sticky='w', pady=2)
+        ToolTip(cb_sh, 'Randomizes the playlist so artists are mixed together')
+
+        self.mix_excl_var = tk.BooleanVar()
+        self._check(sec_o, 'Exclude Instrumental / Karaoke tracks',
+                    self.mix_excl_var).grid(row=2, column=0, columnspan=3,
+                                            sticky='w', pady=(0, 2))
+
+        self.btn_mix = self._navy_btn(sec_o, '[ GENERATE MIX ]', self._generate_mix)
+        self.btn_mix.grid(row=3, column=0, columnspan=3, sticky='ew', pady=(4, 2))
+
     def _build_about_tab(self, parent):
         """Populate the About tab."""
         pad = dict(padx=8, pady=4)
@@ -544,7 +619,7 @@ class WPASSApp:
 
         info = [
             ('App',     'Walkman Playlist Assistant Super Script  [GUI Edition]'),
-            ('Version', 'v0.5'),
+            ('Version', 'v0.6'),
             ('Author',  'gitevanh'),
             ('GitHub',  'https://github.com/gitevanh/walkmanPASS-GUI'),
             ('',        ''),
@@ -599,6 +674,25 @@ class WPASSApp:
             self.e_out.config(state='normal')
             self.e_out.delete(0, tk.END)
             self.e_out.insert(0, d)
+    def _mix_add_folder(self):
+        items = self.mix_list.get(0, tk.END)
+        start = str(Path(items[-1]).parent) if items else str(Path.home())
+        d = filedialog.askdirectory(parent=self.root, initialdir=start)
+        if d and d not in items:
+            self.mix_list.insert(tk.END, d)
+
+    def _mix_remove_selected(self):
+        for i in reversed(self.mix_list.curselection()):
+            self.mix_list.delete(i)
+
+    def _mix_pick_file(self):
+        path = filedialog.asksaveasfilename(
+            parent=self.root, initialdir=Path.home(),
+            defaultextension='.m3u8',
+            filetypes=[('M3U8 Playlist', '*.m3u8')])
+        if path:
+            self.e_mix_pl.delete(0, tk.END)
+            self.e_mix_pl.insert(0, path)
 
     # ── Config ────────────────────────────────────────────────────────────────
 
@@ -734,6 +828,51 @@ class WPASSApp:
                 self._status(f'Error: {exc}')
             finally:
                 self.root.after(0, lambda: self.btn_gen.config(state='normal'))
+
+        threading.Thread(target=task, daemon=True).start()
+    def _generate_mix(self):
+        """Validate inputs and start mix playlist generation on a background thread."""
+        folders = list(self.mix_list.get(0, tk.END))
+        dest    = self.e_mix_pl.get().strip()
+
+        if not folders:
+            messagebox.showwarning('Missing Input', 'Please add at least one folder.',
+                                    parent=self.root)
+            return
+        if not dest:
+            messagebox.showwarning('Missing Input', 'Please select a Playlist File path.',
+                                    parent=self.root)
+            return
+        missing = [f for f in folders if not Path(f).is_dir()]
+        if missing:
+            messagebox.showerror('Invalid Path',
+                                'Folder(s) not found:\n' + '\n'.join(missing),
+                                parent=self.root)
+            return
+
+        self.btn_mix.config(state='disabled')
+        self._status('Building mix...')
+        shuffle = self.mix_shuffle_var.get()
+        excl    = self.mix_excl_var.get()
+
+        def task():
+            try:
+                written, scanned = generate_mix_playlist(
+                    folders, dest, excl, shuffle, self._update_progress)
+                summary = (f'Mix playlist created from {len(folders)} folder(s).\n'
+                        f'{written:,} tracks written from {scanned:,} scanned.')
+
+                def on_done():
+                    messagebox.showinfo('Done', summary, parent=self.root)
+                    self._status(summary.replace('\n', '  |  '))
+                self.root.after(0, on_done)
+
+            except Exception as exc:
+                self.root.after(0, lambda: messagebox.showerror(
+                    'Error', str(exc), parent=self.root))
+                self._status(f'Error: {exc}')
+            finally:
+                self.root.after(0, lambda: self.btn_mix.config(state='normal'))
 
         threading.Thread(target=task, daemon=True).start()
 
