@@ -273,11 +273,17 @@ def generate_mix_playlist(folders, playlist_path, exclude_instr,
     """
     seen  = set()
     files = []
-    for folder in folders:
-        for f in _scan_files(folder):
-            if f not in seen:
-                seen.add(f)
-                files.append(f)
+    for item in folders:
+        p = Path(item)
+        if p.is_file():
+            if p not in seen and p.suffix.lower() in AUDIO_EXTENSIONS:
+                seen.add(p)
+                files.append(p)
+        else:
+            for f in _scan_files(p):
+                if f not in seen:
+                    seen.add(f)
+                    files.append(f)
 
     if shuffle:
         random.shuffle(files)
@@ -402,7 +408,7 @@ class WPASSApp:
                  text='  WALKMAN PLAYLIST ASSISTANT SUPER SCRIPT  [GUI EDITION]',
                  bg=NAVY, fg=WHITE, font=FONT_BOLD,
                  anchor='w', pady=5, padx=2).pack(side='left')
-        tk.Label(banner, text='v0.5  ',
+        tk.Label(banner, text='v0.61  ',
                  bg=NAVY, fg='#9090c0', font=FONT).pack(side='right', padx=4)
 
         nb = ttk.Notebook(self.root)
@@ -585,6 +591,7 @@ class WPASSApp:
         frm_b = tk.Frame(sec_f, bg=BG)
         frm_b.grid(row=1, column=0, columnspan=2, sticky='ew')
         self._btn(frm_b, 'Add Folder...', self._mix_add_folder).pack(side='left', padx=(0, 4))
+        self._btn(frm_b, 'Add Files...', self._mix_add_files).pack(side='left', padx=(0, 4))
         self._btn(frm_b, 'Remove Selected', self._mix_remove_selected).pack(side='left', padx=(0, 4))
         self._btn(frm_b, 'Clear All', lambda: self.mix_list.delete(0, tk.END)).pack(side='left')
 
@@ -680,7 +687,16 @@ class WPASSApp:
         d = filedialog.askdirectory(parent=self.root, initialdir=start)
         if d and d not in items:
             self.mix_list.insert(tk.END, d)
-
+    def _mix_add_files(self):
+        items = self.mix_list.get(0, tk.END)
+        start = str(Path(items[-1]).parent) if items else str(Path.home())
+        exts  = ' '.join(f'*{e}' for e in AUDIO_EXTENSIONS)
+        paths = filedialog.askopenfilenames(
+            parent=self.root, initialdir=start,
+            filetypes=[('Audio Files', exts), ('All Files', '*.*')])
+        for p in paths:
+            if p not in items:
+                self.mix_list.insert(tk.END, p)
     def _mix_remove_selected(self):
         for i in reversed(self.mix_list.curselection()):
             self.mix_list.delete(i)
@@ -843,7 +859,7 @@ class WPASSApp:
             messagebox.showwarning('Missing Input', 'Please select a Playlist File path.',
                                     parent=self.root)
             return
-        missing = [f for f in folders if not Path(f).is_dir()]
+        missing = [f for f in folders if not Path(f).exists()]
         if missing:
             messagebox.showerror('Invalid Path',
                                 'Folder(s) not found:\n' + '\n'.join(missing),
